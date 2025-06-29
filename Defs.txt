@@ -1,26 +1,17 @@
-`define DE10LITE
-`define VGA
-
+// screen dimensions
+`define WIDTH 640
+`define HEIGHT 480
 // these are the width and height per character (in pixels)
-`define CHARW 6
-`define CHARH 8
-`ifdef DE10LITE
-`define COLORW 4
-`endif
+`define CHAR_WIDTH 6
+`define WIDTH_IN_CHARS 21
+`define CHAR_HEIGHT 8
+`define HEIGHT_IN_CHARS 12
+// color width in bits so for an RGB -> [4][4][4] -> 12-bit per pixel
+`define COLOR_WIDTH 4
 
-
-
-// this is the Rectangle size (RS), the ratio we used to scale our image
+// pixel edgle lenth: so the pixel is RSxRS pixels
 `define RS 5
 
-
-// these are the width and height in terms of number of characters
-`define MAX_WIDTH 21
-`define MAX_HEIGHT 12
-
-`define WIDTH_CHARS 0
-`define HEIGHT_CHARS 0
-`define CHAR_COUNT (`WIDTH_CHARS * `HEIGHT_CHARS)
+`define MAXIMUM_NUMBER_OF_CHARS (`WIDTH_IN_CHARS * `HEIGHT_IN_CHARS)
 
 `define terminating_char "☺"
-`define length (21 * 12)

@@ -5,18 +5,16 @@ module autoMAN
 	input iVGA_CLK, iRST_n, 
 	input enable, 
 	input cHS, cVS, 
-	output [7:0] address,
-	input word_RunTimeData_FLAG,
-	input [31:0] RunTimeData,
-	input [0 : (`length) * 8 - 1] word,
-	output reg [3*`COLORW - 1: 0] RGB_out
+	output reg [3*`COLOR_WIDTH - 1: 0] RGB_out
 );
 
 
-parameter width =  `RS * `CHARW * `WIDTH_CHARS;
-parameter height = `RS * `CHARH * `HEIGHT_CHARS;
+parameter width =  `RS * `CHAR_WIDTH * `WIDTH_IN_CHARS;
+parameter height = `RS * `CHAR_HEIGHT * `HEIGHT_IN_CHARS;
 
-wire [3*`COLORW - 1: 0] RGB_temp;
+wire [3*`COLOR_WIDTH - 1: 0] RGB_temp;
+
+wire [0 : `MAXIMUM_NUMBER_OF_CHARS * 8 - 1] Buffer = "Hello-World int x = 213 |hi|";
 
 reg [15:0] addrx, addry;
 always@(posedge iVGA_CLK, negedge iRST_n) 
@@ -53,55 +51,46 @@ end
 // 52 -> 61 : `0` -> `9`
 // 62 -> 64	: `=`, `|`, `-`
 
-`define char(dest, src, i) assign dest[i] = src[8*(i) +: 8]
+wire [7:0] data [0 : `MAXIMUM_NUMBER_OF_CHARS - 1'b1];
 
-
-wire [7:0] data [0 : `length - 1'b1];
-
-wire [7:0] i, index;
-assign i = addrx / 30 + `WIDTH_CHARS*(addry / 40);
-assign address  = i;
+wire [7:0] index, address;
+assign address = addrx / 30 + `WIDTH_IN_CHARS*(addry / 40);
 generate
     genvar j;
-    for (j = 0; j < `length; j = j + 1) begin : required_block_name
-		`char(data, word, j);
+    for (j = 0; j < `MAXIMUM_NUMBER_OF_CHARS; j = j + 1) begin : required_block_name
+		assign data[j] = Buffer[8*(j) -: 8];
     end
 endgenerate
 
 always@(posedge iVGA_CLK) begin
-	if (word_RunTimeData_FLAG) begin
-		RGB_out <= (RunTimeData != 0) ? 12'hFFF : 12'd0;
-	end
-	else begin
-		RGB_out <= (address >= `length || data[address] == `terminating_char || data[address] == 0 || data[address] == " ") ? 12'd0 : 
-		(
-			(index == 8'hFF) ? 12'd0 : RGB_temp
-		);
-	end
+	RGB_out <= (address >= `MAXIMUM_NUMBER_OF_CHARS || data[address] == `terminating_char || data[address] == 0 || data[address] == " ") ? 12'd0 : 
+	(
+		(index == 8'hFF) ? 12'd0 : RGB_temp
+	);
 end
 
 char2index C2I
 (
-	.in_char(data[i]),
+	.in_char(data[address]),
 	.out_index(index)
 );
 
 CharMap cmap
 (
 	.address 
-(
 	(
-		(index) * 48
-	) + 
+		(
+			(index) * 48
+		) + 
 
-	(
-		((addrx/`RS) % (`CHARW))
-	) + 
+		(
+			((addrx/`RS) % (`CHAR_WIDTH))
+		) + 
 
-	(
-		(((addry/`RS) % (`CHARH))*6)
-	)
-),
+		(
+			(((addry/`RS) % (`CHAR_HEIGHT))*6)
+		)
+	),
 	
 	.clock ( ~iVGA_CLK ),
 	.q ( RGB_temp )
