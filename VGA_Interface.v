@@ -53,7 +53,9 @@ VGA_controller VGA_CTRL
 (
 	.iVGA_CLK(VGA_CLK), 
 	.iRST_n(DLY_RST), 
-	.AutoMan_StaticImage(SW[0]),
+	.AutoMan_StaticImage(1'b0),
+	.AdvanceCursor(~KEY[0]),
+	.KeyboardInput(SW[7:0]),
 
 	.r_data(VGA_R),
 	.g_data(VGA_G),

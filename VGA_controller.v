@@ -8,6 +8,8 @@ module VGA_controller
 	input iVGA_CLK,
 	input iRST_n,
 	input AutoMan_StaticImage,
+	input AdvanceCursor,
+	input [7:0] KeyboardInput,
 
 	output [`COLOR_WIDTH - 1:0] r_data,
 	output [`COLOR_WIDTH - 1:0] g_data,
@@ -101,6 +103,8 @@ autoMAN automan
 	.enable(DataSource),
 	.cHS(cHS),
 	.cVS(cVS),
+	.AdvanceCursor(AdvanceCursor),
+	.KeyboardInput(KeyboardInput),
 	.RGB_out(RGB_Auto)
 );
 

@@ -5,6 +5,8 @@ module autoMAN
 	input iVGA_CLK, iRST_n, 
 	input enable, 
 	input cHS, cVS, 
+	input AdvanceCursor,
+	input [7:0] KeyboardInput,
 	output reg [3*`COLOR_WIDTH - 1: 0] RGB_out
 );
 
@@ -14,36 +16,25 @@ parameter height = `RS * `CHAR_HEIGHT * `HEIGHT_IN_CHARS;
 
 wire [3*`COLOR_WIDTH - 1: 0] RGB_temp;
 
-wire [0 : `MAXIMUM_NUMBER_OF_CHARS * 8 - 1] Buffer = "Hello-World int x = 213 |hi|";
 
 reg [15:0] addrx, addry;
-always@(posedge iVGA_CLK, negedge iRST_n) 
-begin
-
-if (!iRST_n)
-begin
-   addrx <= 0;
-   addry <= 0;
-end	
-else if (cHS==1'b0 && cVS==1'b0)
-begin
-   addrx <= 0;
-   addry <= 0;
-end
-else if (enable == 1'b1) begin
-  if (addrx == width - 1)
-  begin 
-     addrx <= 0;
-     if (addry == height - 1)
-        addry <= 0;
-     else
-        addry <= addry + 1;
-  end
-  else
-     addrx <= addrx + 1;
-end
-
-
+always@(posedge iVGA_CLK, negedge iRST_n) begin
+	if (!iRST_n) begin
+		addrx <= 0;
+		addry <= 0;
+	end	
+	else if (cHS==1'b0 && cVS==1'b0) begin
+		addrx <= 0;
+		addry <= 0;
+	end
+	else if (enable == 1'b1) begin
+		if (addrx == width - 1) begin 
+			addrx <= 0;
+			if (addry == height - 1) addry <= 0;
+			else addry <= addry + 1;
+		end
+		else addrx <= addrx + 1;
+	end
 end
 
 //  0 -> 25 : `A` -> `Z`
@@ -51,19 +42,35 @@ end
 // 52 -> 61 : `0` -> `9`
 // 62 -> 64	: `=`, `|`, `-`
 
-wire [7:0] data [0 : `MAXIMUM_NUMBER_OF_CHARS - 1'b1];
 
 wire [7:0] index, address;
 assign address = addrx / 30 + `WIDTH_IN_CHARS*(addry / 40);
-generate
-    genvar j;
-    for (j = 0; j < `MAXIMUM_NUMBER_OF_CHARS; j = j + 1) begin : required_block_name
-		assign data[j] = Buffer[8*(j) -: 8];
-    end
-endgenerate
+
+reg [7:0] data [0 : `MAXIMUM_NUMBER_OF_CHARS - 1];
+reg [31:0] Cursor = 0;
+
+always@(KeyboardInput) begin
+	if (0 <= Cursor && Cursor < `MAXIMUM_NUMBER_OF_CHARS - 1) begin
+		data[Cursor] <= KeyboardInput;
+		data[Cursor + 1'b1] = "|";
+	end
+end
+
+always@(negedge AdvanceCursor) begin
+	Cursor = Cursor + 1'b1;
+end
+
+// wire [7:0] data [0 : `MAXIMUM_NUMBER_OF_CHARS - 1];
+// wire [0 : `MAXIMUM_NUMBER_OF_CHARS * 8 - 1] Buffer = "Hello-World int x = 213 |hi|";
+// generate
+//     genvar j;
+//     for (j = 0; j < `MAXIMUM_NUMBER_OF_CHARS; j = j + 1) begin : required_block_name
+// 		assign data[j] = Buffer[8*(j) +: 8];
+//     end
+// endgenerate
 
 always@(posedge iVGA_CLK) begin
-	RGB_out <= (address >= `MAXIMUM_NUMBER_OF_CHARS || data[address] == `terminating_char || data[address] == 0 || data[address] == " ") ? 12'd0 : 
+	RGB_out <= (address > Cursor + 1'b1 || address >= `MAXIMUM_NUMBER_OF_CHARS || data[address] == `terminating_char || data[address] == 0 || data[address] == " ") ? 12'd0 : 
 	(
 		(index == 8'hFF) ? 12'd0 : RGB_temp
 	);
@@ -108,15 +115,18 @@ module char2index
 
 
 assign out_index = 
-(in_char == "-") ? 8'd64 :
+(in_char == "=") ? 8'd62 : 
 (
-	(in_char == "=") ? 8'd62 : 
+	(in_char == "|") ? 8'd63 : 
 	(
-		("a" <= in_char && in_char <= "z") ? (26 + (in_char - "a")) : 
+		(in_char == "-") ? 8'd64 : 
 		(
-			("A" <= in_char && in_char <= "Z") ? (in_char - "A") : 
+			("a" <= in_char && in_char <= "z") ? (26 + (in_char - "a")) : 
 			(
-				("0" <= in_char && in_char <= "9") ? (52 + (in_char - "0")) : 8'hFF
+				("A" <= in_char && in_char <= "Z") ? (in_char - "A") : 
+				(
+					("0" <= in_char && in_char <= "9") ? (52 + (in_char - "0")) : 8'hFF
+				)
 			)
 		)
 	)
