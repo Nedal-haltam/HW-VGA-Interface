@@ -1,0 +1,17 @@
+/.qsys_edit
+/db
+/incremental_db
+*.bak
+*.rpt
+*.done
+*.cdf
+*.summary
+*.smsg
+*.qdf
+*.bsf
+*.qip
+*.sld
+*.sdc
+*.qws
+*.pof
+*.jdi
