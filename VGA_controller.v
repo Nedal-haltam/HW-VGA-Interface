@@ -42,52 +42,6 @@ video_sync_generator VSG
 	.VS(cVS),
 	.DataSource(DataSource)
 );
-
-////
-////Addresss generator
-always@(posedge iVGA_CLK , negedge iRST_n) 
-begin
-
-if (!iRST_n) 
-	ADDR <= 0; 
-else if (cHS==1'b0 && cVS==1'b0) 
-	ADDR <= 0;
-else if (cBLANK_n==1'b1)
-	ADDR <= ADDR + 1;
-
-end
-
-always@(posedge iVGA_CLK , negedge iRST_n) begin
-// ADDR = 0 -> 307200
-// tempADDRx = 0 -> 127
-// tempADDRy = 0 -> 95
-if (!iRST_n)
-begin
-   tempADDRx <= 0;
-   tempADDRy <= 0;
-end	
-else if (cHS==1'b0 && cVS==1'b0)
-begin
-   tempADDRx <= 0;
-   tempADDRy <= 0;
-end	
-
-else if (cBLANK_n == 1'b1)
-begin
-  if (tempADDRx == `WIDTH - 1)
-  begin 
-     tempADDRx <= 0;
-     if (tempADDRy == `HEIGHT - 1)
-        tempADDRy <= 0;
-     else
-        tempADDRy <= tempADDRy + 1;
-  end
-  else
-     tempADDRx <= tempADDRx + 1;
-end
-
-end
-
 //////////////////////////////////////////////////////////////////////////////
 ImageStatic IMG
 (
@@ -108,6 +62,45 @@ autoMAN automan
 	.RGB_out(RGB_Auto)
 );
 
+
+////
+////Addresss generator
+always@(posedge iVGA_CLK , negedge iRST_n) begin
+	if (!iRST_n) begin
+		ADDR <= 0; 
+	end
+	else if (cHS == 1'b0 && cVS == 1'b0) begin
+		ADDR <= 0;
+	end
+	else if (cBLANK_n == 1'b1) begin
+		ADDR <= ADDR + 1;
+	end
+end
+
+always@(posedge iVGA_CLK , negedge iRST_n) begin
+// ADDR = 0 -> 307200
+// tempADDRx = 0 -> 127
+// tempADDRy = 0 -> 95
+	if (!iRST_n) begin
+		tempADDRx <= 0;
+		tempADDRy <= 0;
+	end	
+	else if (cHS == 1'b0 && cVS == 1'b0) begin
+		tempADDRx <= 0;
+		tempADDRy <= 0;
+	end	
+	else if (cBLANK_n == 1'b1) begin
+		if (tempADDRx == `WIDTH - 1) begin 
+			tempADDRx <= 0;
+			if (tempADDRy == `HEIGHT - 1)
+				tempADDRy <= 0;
+			else
+				tempADDRy <= tempADDRy + 1;
+		end
+		else tempADDRx <= tempADDRx + 1;
+	end
+end
+
 always@(negedge iVGA_CLK) begin
 	if (AutoMan_StaticImage) begin
 		RGB_Data <= RGB_Static;
@@ -119,18 +112,16 @@ always@(negedge iVGA_CLK) begin
 		RGB_Data <= 12'h000;
 	end
 end
+//////Delay the iHD, iVD,iDEN for one clock cycle;
+always@(negedge iVGA_CLK)
+begin
+  oHS <= cHS;
+  oVS <= cVS;
+end
 
 assign r_data = (~cBLANK_n) ? 0 : RGB_Data[1*`COLOR_WIDTH - 1: 0*`COLOR_WIDTH];
 assign g_data = (~cBLANK_n) ? 0 : RGB_Data[2*`COLOR_WIDTH - 1: 1*`COLOR_WIDTH];
 assign b_data = (~cBLANK_n) ? 0 : RGB_Data[3*`COLOR_WIDTH - 1: 2*`COLOR_WIDTH];
 assign FINAL_ADDR = (tempADDRx / `RS) + (tempADDRy / `RS)*(`WIDTH / `RS);
-///////////////////////////////////////////////////////////////////////////////////////////////////
-
-//////Delay the iHD, iVD,iDEN for one clock cycle;
-always@(negedge iVGA_CLK)
-begin
-  oHS<=cHS;
-  oVS<=cVS;
-end
 
 endmodule

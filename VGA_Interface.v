@@ -31,7 +31,11 @@ module VGA_Interface(
 	output		     [3:0]		VGA_G,
 	output		     [3:0]		VGA_B,
 	output		          		VGA_HS,
-	output		          		VGA_VS
+	output		          		VGA_VS,
+
+	//////////// Arduino //////////
+	inout 		    [15:0]		ARDUINO_IO,
+	inout 		          		ARDUINO_RESET_N
 );
 
 wire VGA_CLK, DLY_RST;
@@ -64,5 +68,7 @@ VGA_controller VGA_CTRL
 	.oHS(VGA_HS),
 	.oVS(VGA_VS)
 );
+
+assign ARDUINO_RESET_N = 1'b1;
 
 endmodule

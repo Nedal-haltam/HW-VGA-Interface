@@ -10,14 +10,17 @@ module autoMAN
 	output reg [3*`COLOR_WIDTH - 1: 0] RGB_out
 );
 
-
 parameter width =  `RS * `CHAR_WIDTH * `WIDTH_IN_CHARS;
 parameter height = `RS * `CHAR_HEIGHT * `HEIGHT_IN_CHARS;
 
-wire [3*`COLOR_WIDTH - 1: 0] RGB_temp;
-
-
+reg [24:0] halfclk;
+reg [7:0] data [0 : `MAXIMUM_NUMBER_OF_CHARS - 1];
+reg [31:0] Cursor;
 reg [15:0] addrx, addry;
+
+wire [3*`COLOR_WIDTH - 1: 0] RGB_temp;
+wire [7:0] index, address, KeyboardInputIndex;
+
 always@(posedge iVGA_CLK, negedge iRST_n) begin
 	if (!iRST_n) begin
 		addrx <= 0;
@@ -42,35 +45,32 @@ end
 // 52 -> 61 : `0` -> `9`
 // 62 -> 64	: `=`, `|`, `-`
 
+char2index KeyboardInput_C2I
+(
+	.in_char(KeyboardInput),
+	.out_index(KeyboardInputIndex)
+);
 
-wire [7:0] index, address;
-assign address = addrx / 30 + `WIDTH_IN_CHARS*(addry / 40);
-
-reg [7:0] data [0 : `MAXIMUM_NUMBER_OF_CHARS - 1];
-reg [31:0] Cursor = 0;
-
-always@(KeyboardInput) begin
+always@(posedge AdvanceCursor) begin
 	if (0 <= Cursor && Cursor < `MAXIMUM_NUMBER_OF_CHARS - 1) begin
-		data[Cursor] <= KeyboardInput;
-		data[Cursor + 1'b1] = "|";
+		if (KeyboardInput == 8'd1) begin
+			Cursor = 0;
+			data[0] = "|";
+		end
+		else if (KeyboardInputIndex != 8'hFF) begin
+			data[Cursor] = KeyboardInput;
+			data[Cursor + 1'b1] = "|";
+			Cursor = Cursor + 1'b1;
+		end
 	end
 end
 
-always@(negedge AdvanceCursor) begin
-	Cursor = Cursor + 1'b1;
+always@(posedge iVGA_CLK) begin
+	halfclk <= halfclk + 1'b1;
 end
 
-// wire [7:0] data [0 : `MAXIMUM_NUMBER_OF_CHARS - 1];
-// wire [0 : `MAXIMUM_NUMBER_OF_CHARS * 8 - 1] Buffer = "Hello-World int x = 213 |hi|";
-// generate
-//     genvar j;
-//     for (j = 0; j < `MAXIMUM_NUMBER_OF_CHARS; j = j + 1) begin : required_block_name
-// 		assign data[j] = Buffer[8*(j) +: 8];
-//     end
-// endgenerate
-
 always@(posedge iVGA_CLK) begin
-	RGB_out <= (address > Cursor + 1'b1 || address >= `MAXIMUM_NUMBER_OF_CHARS || data[address] == `terminating_char || data[address] == 0 || data[address] == " ") ? 12'd0 : 
+	RGB_out <= ((address == Cursor && halfclk >= (1 << 24)) || address > Cursor || address >= `MAXIMUM_NUMBER_OF_CHARS || data[address] == `terminating_char || data[address] == 0 || data[address] == " ") ? 12'd0 : 
 	(
 		(index == 8'hFF) ? 12'd0 : RGB_temp
 	);
@@ -103,6 +103,7 @@ CharMap cmap
 	.q ( RGB_temp )
 );
 
+assign address = addrx / 30 + `WIDTH_IN_CHARS*(addry / 40);
 
 endmodule
 
