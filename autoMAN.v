@@ -51,16 +51,26 @@ char2index KeyboardInput_C2I
 	.out_index(KeyboardInputIndex)
 );
 
+
+`define ResetScreen Cursor = 0; \
+data[0] = "|"
+
+`define PrintChar(c) data[Cursor] = c; \
+data[Cursor + 1'b1] = "|"; \
+Cursor = Cursor + 1'b1
+
+
 always@(posedge AdvanceCursor) begin
-	if (0 <= Cursor && Cursor < `MAXIMUM_NUMBER_OF_CHARS - 1) begin
-		if (KeyboardInput == 8'd1) begin
-			Cursor = 0;
-			data[0] = "|";
+	if (KeyboardInput == 8'h7F && Cursor > 0) begin
+		Cursor = Cursor - 1'b1;
+		data[Cursor] = "|";
+	end
+	else if (0 <= Cursor && Cursor < `MAXIMUM_NUMBER_OF_CHARS - 1) begin
+		if (KeyboardInput == 8'h00) begin
+			`ResetScreen;
 		end
-		else if (KeyboardInputIndex != 8'hFF) begin
-			data[Cursor] = KeyboardInput;
-			data[Cursor + 1'b1] = "|";
-			Cursor = Cursor + 1'b1;
+		else if (KeyboardInputIndex != 8'hFF || KeyboardInput == " ") begin
+			`PrintChar(KeyboardInput);
 		end
 	end
 end
@@ -68,6 +78,12 @@ end
 always@(posedge iVGA_CLK) begin
 	halfclk <= halfclk + 1'b1;
 end
+
+// always@(posedge halfclk[24]) begin
+// 	`PrintChar("1");
+// end
+
+
 
 always@(posedge iVGA_CLK) begin
 	RGB_out <= ((address == Cursor && halfclk >= (1 << 24)) || address > Cursor || address >= `MAXIMUM_NUMBER_OF_CHARS || data[address] == `terminating_char || data[address] == 0 || data[address] == " ") ? 12'd0 : 
